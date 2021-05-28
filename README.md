@@ -1,4 +1,4 @@
-# Project Euler CLI
+# Eclair — Project Euler CLI
 
 Retrieves [projecteuler.net](https://projecteuler.net) problems right into the terminal.
 
