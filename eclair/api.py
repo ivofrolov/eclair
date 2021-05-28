@@ -1,6 +1,7 @@
 import logging
 import enum
 import dataclasses
+from typing import Sequence, Tuple
 
 from html.parser import HTMLParser
 from urllib.request import urlopen
@@ -15,16 +16,20 @@ logger = logging.getLogger(__name__)
 
 @dataclasses.dataclass
 class Problem:
+    """Represents task title and problem statement."""
+
     prefix: str = ''
     title: str = ''
     content: str = ''
 
-    def __str__(self):
-        problem = f'{self.prefix}. {self.title}\n\n{self.content}'
+    def __str__(self) -> str:
+        problem = f'{self.prefix}: {self.title}\n\n{self.content}'
         return problem
 
 
 class ParseState(enum.IntEnum):
+    """Problem page content parsing ordered states."""
+
     start = enum.auto()
     idle = enum.auto()
     title = enum.auto()
@@ -33,6 +38,8 @@ class ParseState(enum.IntEnum):
 
 
 class ProblemPageParser(HTMLParser):
+    """Extracts problem statement text from html page."""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._state = ParseState.start
@@ -42,10 +49,7 @@ class ProblemPageParser(HTMLParser):
     def problem(self) -> Problem:
         return self._problem
 
-    def next_state(self):
-        self._state = self._state.next()
-
-    def handle_starttag(self, tag: str, attrs):
+    def handle_starttag(self, tag: str, attrs: Sequence[Tuple[str, str]]):
         # <div id="content">
         if tag == 'div' and self._state == ParseState.start:
             attrs = dict(attrs)
@@ -90,9 +94,11 @@ class ProblemPageParser(HTMLParser):
 
 
 def get_problem(number: int) -> Problem:
+    """Returns numbered problem statement."""
     url = '{0}/{1}'.format(BASE_URL, urlencode({'problem': number}))
     logger.debug('Executing query to %s', url)
     with urlopen(url) as response:
+        logger.debug('Got %s response', response.reason)
         parser = ProblemPageParser()
         parser.feed(response.read().decode())
         return parser.problem

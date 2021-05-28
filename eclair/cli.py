@@ -6,17 +6,20 @@ from eclair.api import get_problem
 
 
 def get_exact_problem(args: argparse.Namespace):
+    """Numbered problem command handler."""
     assert hasattr(args, 'number'), 'number argument not provided'
     problem = get_problem(args.number)
     print(problem)
 
 
 def get_random_problem(args: argparse.Namespace):
+    """Random problem command handler."""
     problem = get_problem(random.randint(1, 757))
     print(problem)
 
 
 def entrypoint():
+    """Sets up program environment."""
     parser = argparse.ArgumentParser(prog='python3 -m eclair')
     parser.add_argument('--verbose', '-v', action='count', default=0)
 
@@ -32,6 +35,6 @@ def entrypoint():
     args = parser.parse_args()
 
     level = (5 - min(args.verbose, 5)) * 10
-    logging.basicConfig(level=level, format='%(levelname)s %(message)s')
+    logging.basicConfig(level=level, format='%(message)s')
 
     args.func(args)
