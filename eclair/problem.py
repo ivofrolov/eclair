@@ -37,7 +37,10 @@ class ProblemPageParser(StatefulHTMLParser):
         self.problem.prefix = data
 
     def _extend_problem_statement(self, data: str):
-        self.problem.statement += data + '\n'
+        self.problem.statement += data
+
+    def _end_problem_statement(self):
+        self.problem.statement += '\n'
 
     def extract_qualifier(self, attrs: Mapping[str, str]) -> str:
         qualifier = attrs.get('id', attrs.get('role'))
@@ -46,26 +49,36 @@ class ProblemPageParser(StatefulHTMLParser):
     def build_transitions(self) -> TransitionTable:
         transitions = {
             SpecialState.SKIP: {
-                ('h2', None): TransitionTarget('title', None),
-                ('div', 'problem_info'): TransitionTarget('prefix_container', None),
-                ('div', 'problem'): TransitionTarget('statement_container', None),
+                ('h2', None): TransitionTarget('title'),
+                ('div', 'problem_info'): TransitionTarget('prefix_container'),
+                ('div', 'problem'): TransitionTarget('statement_container'),
             },
             'title': {
                 SpecialSymbol.DATA: TransitionTarget(
-                    'title_data', self._set_problem_title
+                    'title_data', on_enter=self._set_problem_title
                 )
             },
-            'prefix_container': {('h3', None): TransitionTarget('prefix', None)},
+            'prefix_container': {('h3', None): TransitionTarget('prefix')},
             'prefix': {
                 SpecialSymbol.DATA: TransitionTarget(
-                    'prefix_data', self._set_problem_prefix
+                    'prefix_data', on_enter=self._set_problem_prefix
                 )
             },
-            'statement_container': {('p', None): TransitionTarget('statement', None)},
+            'statement_container': {
+                ('p', None): TransitionTarget(
+                    'statement', on_exit=self._end_problem_statement
+                )
+            },
             'statement': {
                 SpecialSymbol.DATA: TransitionTarget(
-                    'statement_data', self._extend_problem_statement
-                )
+                    'statement_data', on_enter=self._extend_problem_statement
+                ),
+                SpecialSymbol.ANY: TransitionTarget('statement_markup'),
+            },
+            'statement_markup': {
+                SpecialSymbol.DATA: TransitionTarget(
+                    'statement_data', on_enter=self._extend_problem_statement
+                ),
             },
         }
         return transitions

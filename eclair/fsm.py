@@ -16,13 +16,15 @@ from typing import (
 
 class TransitionTarget(NamedTuple):
     state: str
-    handler: Optional[Callable[Any, NoReturn]] = None
+    on_enter: Optional[Callable[Any, NoReturn]] = None
+    on_exit: Optional[Callable[..., NoReturn]] = None
 
 
 TransitionTable = Mapping[str, Mapping[Hashable, TransitionTarget]]
 
 
 class SpecialSymbol(Enum):
+    ANY = 'ANY'
     BACK = 'BACK'
     DATA = 'DATA'
 
@@ -43,31 +45,35 @@ class HtmlTraversalFSM:
         self.transitions = transitions
 
         self.current_state = start_state
-        self.states_stack = [start_state]
+        self.states_stack = [(start_state, None)]
 
-    def transition_exists(
+    def get_transition(
         self, state: Union[str, SpecialState], symbol: Hashable
-    ) -> bool:
+    ) -> Optional[TransitionTarget]:
         if state not in self.transitions:
-            return False
-        if symbol not in self.transitions[state]:
-            return False
-        return True
+            return None
+        transition = self.transitions[state].get(symbol)
+        if transition is None:
+            transition = self.transitions[state].get(SpecialSymbol.ANY)
+        return transition
 
     def change_state(self, symbol: Hashable, data: Any = None):
         if symbol == SpecialSymbol.BACK:
-            self.states_stack.pop()
-            self.current_state = self.states_stack[-1]
+            _, on_exit = self.states_stack.pop()
+            if callable(on_exit):
+                on_exit()
+            self.current_state = self.states_stack[-1][0]
             return
 
-        if self.transition_exists(self.current_state, symbol):
-            state, handler = self.transitions[self.current_state][symbol]
-            if callable(handler):
-                handler(data)
+        target = self.get_transition(self.current_state, symbol)
+        if target:
+            state, on_enter, on_exit = target
+            if callable(on_enter):
+                on_enter(data)
         else:
-            state = SpecialState.SKIP
+            state, on_exit = SpecialState.SKIP, None
 
-        self.states_stack.append(state)
+        self.states_stack.append((state, on_exit))
         self.current_state = state
 
 
