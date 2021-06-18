@@ -1,5 +1,6 @@
 import dataclasses
-from typing import Mapping
+from string import Template
+from typing import Mapping, Optional
 
 from eclair.fsm import (
     StatefulHTMLParser,
@@ -21,6 +22,11 @@ class Problem:
     def __str__(self) -> str:
         problem = f'{self.prefix}: {self.title}\n\n{self.statement}'
         return problem
+
+    def render(self, template: Optional[Template] = None):
+        if template is None:
+            return str(self)
+        return template.substitute(dataclasses.asdict(self))
 
 
 class ProblemPageParser(StatefulHTMLParser):
