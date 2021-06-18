@@ -67,7 +67,10 @@ class ProblemPageParser(StatefulHTMLParser):
             'statement_container': {
                 ('p', None): TransitionTarget(
                     'statement', on_exit=self._end_problem_statement
-                )
+                ),
+                SpecialSymbol.DATA: TransitionTarget(
+                    'statement_data', on_enter=self._extend_problem_statement
+                ),
             },
             'statement': {
                 SpecialSymbol.DATA: TransitionTarget(
